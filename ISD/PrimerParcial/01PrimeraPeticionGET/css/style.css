@@ -1,0 +1,105 @@
+:root {
+    --guinda-ipn: #6b1c36;
+    --guinda-hover: #501327;
+    --gris-claro: #f4f4f4;
+    --texto-oscuro: #333333;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--gris-claro);
+    color: var(--texto-oscuro);
+    margin: 0;
+    padding: 20px;
+    line-height: 1.6;
+}
+
+.contenedor {
+    max-width: 900px;
+    margin: 0 auto;
+    background-color: #ffffff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.btn-regresar {
+    display: inline-block;
+    margin-bottom: 20px;
+    padding: 8px 16px;
+    background-color: var(--guinda-ipn);
+    color: #ffffff;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.9em;
+    transition: background-color 0.25s ease, transform 0.2s ease;
+}
+
+.btn-regresar:hover {
+    background-color: var(--guinda-hover);
+    transform: translateX(-3px);
+}
+
+header {
+    border-bottom: 3px solid var(--guinda-ipn);
+    padding-bottom: 10px;
+    margin-bottom: 25px;
+}
+
+h1 {
+    color: var(--guinda-ipn);
+    margin: 0 0 10px 0;
+}
+
+.subtitulo {
+    font-size: 1.1em;
+    color: #555;
+    font-weight: bold;
+}
+
+h2 {
+    color: var(--guinda-ipn);
+    border-left: 4px solid var(--guinda-ipn);
+    padding-left: 10px;
+    margin-top: 30px;
+}
+
+.captura-container {
+    text-align: center;
+    margin: 20px 0;
+    padding: 15px;
+    background-color: #282c34;
+    border-radius: 6px;
+}
+
+.captura-container img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+}
+
+.elementos-lista {
+    background-color: #f9f9f9;
+    padding: 15px 20px 15px 40px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+}
+
+.elementos-lista li {
+    margin-bottom: 10px;
+}
+
+strong {
+    color: var(--guinda-ipn);
+}
+
+code {
+    background-color: #f1f5f9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Consolas', monospace;
+    color: #c2410c;
+    font-size: 0.9em;
+}

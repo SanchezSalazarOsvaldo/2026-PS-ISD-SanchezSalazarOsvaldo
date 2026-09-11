@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Primera Petición GET</title>
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+
+    <div class="contenedor">
+        <a href="../../../index.html" class="btn-regresar">
+            ← Regresar al Portafolio
+        </a>
+
+        <header>
+            <h1>Primera Petición GET</h1>
+            <div class="subtitulo">Sánchez Salazar Osvaldo 5IV8</div>
+            <p><strong>Ruta de la API:</strong> <code>/api/talleres</code> (Método GET)</p>
+        </header>
+
+        <section>
+            <h2>1. Captura de Pantalla de la Ejecución</h2>
+            <p>Evidencia de la ejecución del script <code>01cliente.js</code> en la terminal:</p>
+
+            <div class="captura-container">
+                <img src="PrimeraPeticionGET.png" alt="Captura de pantalla de la terminal con la respuesta del servidor">
+            </div>
+        </section>
+
+        <section>
+            <h2>2. Explicación de los Resultados</h2>
+            <p>
+                Al ejecutar el programa, sí se logró establecer la conexión exitosamente.
+                Nuestro cliente realizó una petición asíncrona mediante el protocolo HTTP a la URL del backend alojado en Render.
+            </p>
+            <p>
+                El servidor recibió la petición, se conectó internamente a la base de datos para consultar la información requerida, procesó los datos y devolvió una respuesta válida al cliente sin arrojar errores.
+            </p>
+        </section>
+
+        <section>
+            <h2>3. Elementos Obtenidos en la Respuesta</h2>
+            <p>A través del objeto <code>Response</code> obtenido por la función <code>fetch</code>, se extrajeron los siguientes elementos clave:</p>
+
+            <ul class="elementos-lista">
+                <li>
+                    <strong>Protocolo y URL:</strong> Se verificó que la petición viajó a través de un canal seguro utilizando <code>HTTPS sobre TCP</code>, apuntando exactamente al endpoint solicitado.
+                </li>
+                <li>
+                    <strong>Código de Estado (Status):</strong> Se obtuvo un código <code>200 OK</code>. Esto indica a nivel de protocolo que la solicitud GET fue recibida, entendida y procesada con éxito por el servidor.
+                </li>
+                <li>
+                    <strong>Tiempo de Ida y Vuelta (RTT):</strong> Se calculó el <em>Round-Trip Time</em> en milisegundos. Este valor representa el tiempo total que tomó el viaje de la solicitud desde el cliente hasta el servidor en la nube, más el tiempo que tardó en regresar la respuesta con los datos.
+                </li>
+                <li>
+                    <strong>Cuerpo de la Respuesta:</strong> Se recibió un objeto en formato <code>JSON</code>. Tras parsear la respuesta con <code>await respuesta.json()</code>, se obtuvo la estructura de datos proveniente de la base de datos (los registros de los talleres), la cual fue impresa en consola debidamente formateada.
+                </li>
+            </ul>
+        </section>
+    </div>
+
+</body>
+</html>
