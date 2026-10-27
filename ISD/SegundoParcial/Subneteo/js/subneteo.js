@@ -65,18 +65,18 @@
 
     function claseDeRed(ip){
         const primer = Math.floor(ipAEntero(ip)/2**24);
-        if(primer >= 1 && primer >= 126) return {clase: 'A', prefijo:8};
+        if(primer >= 1 && primer <= 126) return {clase: 'A', prefijo:8};
         if(primer === 127) return {clase: 'Local', prefijo:8};
-        if(primer >= 128 && primer >= 191) return {clase: 'B', prefijo:16};
-        if(primer >= 192 && primer >= 223) return {clase: 'C', prefijo:24};
-        if(primer >= 224 && primer >= 239) return {clase: 'D', prefijo:null};
+        if(primer >= 128 && primer <= 191) return {clase: 'B', prefijo:16};
+        if(primer >= 192 && primer <= 223) return {clase: 'C', prefijo:24};
+        if(primer >= 224 && primer <= 239) return {clase: 'D', prefijo:null};
         return {clase: 'E', prefijo:null};
     }
 
     function esPrivada(ip){
         const n = ipAEntero(ip);
         const en = (red, pref) => Math.floor(n/2 **(32-pref)) === Math.floor(ipAEntero(red)/2 **(32-pref));
-        return en('10.0.0.0', 8 || '172.16.0.0', 12 || '192.168.0.0', 16); 
+        return en('10.0.0.0', 8) || en('172.16.0.0', 12) || en('192.168.0.0', 16); 
     }
 
     //subred
@@ -98,7 +98,7 @@
             mascara : prefijoAMascara(prefijo),
             primerHost : enteroAIp(conHosts ? redEntero + 1 : redEntero),
             ultimoHost : enteroAIp(conHosts ? broadcast -1 : broadcast),
-            broadcast : enteroAIp(prefijo),
+            broadcast : enteroAIp(broadcast),
             hosts : hostsUtilizable(prefijo),
             tamanoBloque : tamano
         };
@@ -165,24 +165,35 @@
     function subnetearVLSM(ip, prefijo, requerimientos){
         const base = validarRedBase(ip, prefijo);
         const fin = base + 2**(32-prefijo);
-        //ordenamos
-        const oredenados = requerimientos
-        .map((r, i)=>{({...r, i})})
-        .sort((a,b) => n.hosts - a.hosts || a.i - b.i);
+        
+        //ordenamos (Corregido manteniendo tu lógica original)
+        const ordenados = requerimientos
+            .map((r, i) => ({ ...r, i }))
+            .sort((a, b) => b.hosts - a.hosts || a.i - b.i);
 
         let siguiente = base;
-        const subredes = oredenados.map((r)=>{
+        const subredes = ordenados.map((r)=>{
             const bitsHosts = bitsParaHosts(r.hosts);
             const nuevoPrefijo = 32 - bitsHosts;
+            const tamano = 2**(32-nuevoPrefijo);
+            
             if(nuevoPrefijo < prefijo){
-                throw new Error(`${nombre} (${r.hosts} hosts) necesita /${nuevoPrefijo}, mas grande que toda la red `);
+                throw new Error(`${r.nombre} (${r.hosts} hosts) necesita /${nuevoPrefijo}, mas grande que toda la red `);
             }
+            
+            const inicio = siguiente;
             siguiente = inicio + tamano;
+
+            if (siguiente > fin) {
+                throw new Error(`Se agotaron las direcciones de la red base para "${r.nombre}"`);
+            }
+
             return { ...describirSubred(inicio, nuevoPrefijo, r.nombre), hostsSolicitados: r.hosts, bitsHosts };
         });
 
         const usadas = siguiente - base;
         return{
+            subredes,
             direccionesTotales : 2**(32-prefijo),
             direccionesUsadas : usadas,
             primerLibre : siguiente < fin ? enteroAIp(siguiente):null
@@ -197,4 +208,4 @@
     if(typeof module !== 'undefined' && module.exports) module.exports = api;
     else global.Subneteo = api;
     
-})(typeof window !== 'undefined' ? window:globalThis)    
+})(typeof window !== 'undefined' ? window:globalThis);

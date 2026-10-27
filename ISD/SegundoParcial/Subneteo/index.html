@@ -8,6 +8,7 @@
 </head>
 <body>
     <header class="encabezado" >
+        <a href="../../../index.html" class="btn-regresar" style="display: inline-block; margin-bottom: 12px; padding: 6px 12px; background: rgba(255, 255, 255, 0.2); color: #fff; text-decoration: none; border-radius: 4px; font-size: 0.9rem;">← Volver al Portafolio</a>
         <h1>Calculadora de Subneto IPV4</h1>
         <p>Ejemplo de calculadora para subnetear redes en IPV4</p>
     </header>
@@ -21,7 +22,7 @@
     <main>
         <section id="panel-binario" class="panel activo" >
             <h2>Convertir un octeto o una IP a Binario</h2>
-            <form id="bin-entrada" class="formulario">
+            <form id="form-binario" class="formulario">
                 <label for="">Numero (0 - 255) o IP Completa</label>
                 <input type="text"  id="bin-entrada" value="192.168.50.0" autocomplete="off">
                 <button type="submit" >Convertir</button>
@@ -64,7 +65,7 @@
                     <div class="vlsm-filas" >
 
                     </div>
-                    <button type="button" id="vlsn-agregar" class="secundario" >Agregar Subred</button>
+                    <button type="button" id="vlsm-agregar" class="secundario" >Agregar Subred</button>
 
                 </div>
                 <button type="submit" >Subnetear</button>
@@ -72,23 +73,23 @@
             <div id="vlsm-resultado" ></div>
         </section>
 
-        <section id="panel-ip" class=panel >
+        <section id="panel-ip" class="panel" >
             <h2>Encontrar la red, el rando y el broadcast de una IP</h2>
             <form id="form-ip" class="formulario">
                 <label>Direccion IP 
                     <input type="text" id="ip-dir" value="10.28.90.92" autocomplete="off">
                 </label>
                 <label> Prefijo o Máscara
-                    <input type="text" id="ip-prefijo" value="/12" a>
+                    <input type="text" id="ip-prefijo" value="/12">
                 </label>
                 <button type="submit" >Analizar</button>
             </form>
-            <div id="ip-resultdo" ></div>
+            <div id="ip-resultado" ></div>
         </section>
     </main>
 
-      <script src="./js/subneteo.js"></script>
-  <script src="./js/app.js"></script>
+    <script src="./js/subneteo.js"></script>
+    <script src="./js/app.js"></script>
     
 </body>
 </html>

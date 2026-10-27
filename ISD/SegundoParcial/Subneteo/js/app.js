@@ -35,7 +35,7 @@
       <div class="tarjeta">
         <h3>Red base ${escapar(ip)}/${prefijo}</h3>
         <dl class="datos">
-          <div><dt>Clase (histórica)</dt><dd>${clase.clase}${clase.prefijoPorDefecto ? ` · /${clase.prefijoPorDefecto} por defecto` : ''}</dd></div>
+          <div><dt>Clase (histórica)</dt><dd>${clase.clase}${clase.prefijo ? ` · /${clase.prefijo} por defecto` : ''}</dd></div>
           <div><dt>Tipo</dt><dd>${S.esPrivada(ip) ? 'Privada (RFC 1918)' : 'Pública'}</dd></div>
           <div><dt>Máscara</dt><dd>${S.prefijoAMascara(prefijo)}</dd></div>
           <div><dt>Direcciones en total</dt><dd>${formatoMiles(2 ** (32 - prefijo))}</dd></div>
@@ -127,7 +127,7 @@
         <div class="tarjeta">
           <h3>Resultado</h3>
           <dl class="datos">
-            <div><dt>Bits prestados</dt><dd>${r.bitsPrestados} (2^${r.bitsPrestados} = ${r.totalSubredes} subredes)</dd></div>
+            <div><dt>Bits prestados</dt><dd>${r.bistPrestados} (2^${r.bistPrestados} = ${r.totalSubredes} subredes)</dd></div>
             <div><dt>Nuevo prefijo</dt><dd>/${r.nuevoPrefijo} · ${S.prefijoAMascara(r.nuevoPrefijo)}</dd></div>
             <div><dt>Hosts útiles por subred</dt><dd>2^${32 - r.nuevoPrefijo} − 2 = ${formatoMiles(r.hostsPorSubred)}</dd></div>
             <div><dt>Salto entre subredes</dt><dd>${formatoMiles(r.subredes[0].tamanoBloque)} direcciones</dd></div>
@@ -139,7 +139,54 @@
     }
   });
 
-  // ---------- VLSM ----------Tarea
+  // ---------- VLSM ----------
+
+  function agregarFila(nombre = '', hosts = '') {
+    const contenedor = document.querySelector('.vlsm-filas');
+    const div = document.createElement('div');
+    div.className = 'req-fila';
+    div.innerHTML = `
+      <input type="text" placeholder="Nombre de área" value="${escapar(nombre)}" class="vlsm-nombre" required>
+      <input type="number" min="1" placeholder="Hosts" value="${hosts}" class="vlsm-hosts" required>
+      <button type="button" class="quitar" title="Eliminar fila">×</button>
+    `;
+    div.querySelector('.quitar').addEventListener('click', () => div.remove());
+    contenedor.appendChild(div);
+  }
+
+  $('vlsm-agregar').addEventListener('click', () => agregarFila());
+
+  $('form-vlsm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const destino = $('vlsm-resultado');
+    try {
+      const ip = $('vlsm-red').value.trim();
+      const prefijo = S.leerPrefijo($('vlsm-prefijo').value);
+      
+      const filas = document.querySelectorAll('.req-fila');
+      const requerimientos = Array.from(filas).map((f) => ({
+        nombre: f.querySelector('.vlsm-nombre').value.trim(),
+        hosts: Number(f.querySelector('.vlsm-hosts').value)
+      }));
+
+      if (requerimientos.length === 0) {
+        throw new Error('Agrega al menos una subred para calcular por VLSM.');
+      }
+
+      const r = S.subnetearVLSM(ip, prefijo, requerimientos);
+      destino.innerHTML = tarjetaRedBase(ip, prefijo) + `
+        <div class="tarjeta">
+          <h3>Resumen de Utilización VLSM</h3>
+          <dl class="datos">
+            <div><dt>Direcciones asignadas</dt><dd>${formatoMiles(r.direccionesUsadas)} / ${formatoMiles(r.direccionesTotales)}</dd></div>
+            <div><dt>Siguiente IP libre</dt><dd>${r.primerLibre ? r.primerLibre : 'Ninguna (Red llena)'}</dd></div>
+          </dl>
+        </div>
+        <div class="tarjeta">${tablaSubredes(r.subredes, true)}</div>`;
+    } catch (err) {
+      mostrarError(destino, err);
+    }
+  });
 
   // ---------- ¿A qué red pertenece? ----------
 
@@ -199,7 +246,7 @@
   };
 
   function cargarFilas(lista) {
-    $('vlsm-filas').innerHTML = '';
+    document.querySelector('.vlsm-filas').innerHTML = '';
     lista.forEach(([nombre, hosts]) => agregarFila(nombre, hosts));
   }
 
