@@ -4,12 +4,11 @@ const path = require('path');
 const express = require('express');
 const session = require('express-session');
 const MySQLStore = require('express-mysql-session')(session);
-const { crearModeloUsuarios } = require('./modelos/usuarios.modelo');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const {crearModeloUsuarios} = require('./modelos/usuarios.modelo');
 const { config } = require('dotenv');
-const {crearModeloTokens} = requite('./modelos/tokens.modelo');
+const {crearModeloTokens} = require('./modelos/tokens.modelo');
 
 
 const NOMBRE_COOKIE = 'connect.sid';
@@ -122,7 +121,7 @@ function crearApp(config, pool){
 
       //guardo la sesion
       const guardar = () =>{
-        req.session.datos = datos;
+        req.session.usuario = datos; // <--- Cambiado de .datos a .usuario para que coincida con las validaciones
         req.session.visitas = visitas;
         req.session.creada = Date.now();
         req.session.ultimoUso = Date.now();
