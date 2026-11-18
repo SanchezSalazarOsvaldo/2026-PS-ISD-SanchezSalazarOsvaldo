@@ -1,0 +1,23 @@
+{
+  "name": "2026-ps-isd-sanchezsalazarosvaldo",
+  "version": "1.0.0",
+  "description": "",
+  "keywords": [
+    "jimbo"
+  ],
+  "homepage": "https://github.com/SanchezSalazarOsvaldo/2026-PS-ISD-SanchezSalazarOsvaldo#readme",
+  "bugs": {
+    "url": "https://github.com/SanchezSalazarOsvaldo/2026-PS-ISD-SanchezSalazarOsvaldo/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SanchezSalazarOsvaldo/2026-PS-ISD-SanchezSalazarOsvaldo.git"
+  },
+  "license": "ISC",
+  "author": "yo",
+  "type": "commonjs",
+  "main": "n",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
