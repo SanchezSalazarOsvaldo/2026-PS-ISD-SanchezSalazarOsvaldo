@@ -6,10 +6,8 @@ const session = require('express-session');
 const MySQLStore = require('express-mysql-session')(session);
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-const {crearModeloUsuarios} = require('./modelos/usuarios.modelo');
-const { config } = require('dotenv');
-const {crearModeloTokens} = require('./modelos/tokens.modelo');
-
+const { crearModeloUsuarios } = require('./modelos/usuarios.modelo');
+const { crearModeloTokens } = require('./modelos/tokens.modelo');
 
 const NOMBRE_COOKIE = 'connect.sid';
 
@@ -27,6 +25,8 @@ function crearApp(config, pool){
   const app = express();
   app.use(express.json());
   const usuarios = crearModeloUsuarios(pool);
+  //instanciamos el modelo de tokens para poder revisar revocaciones y guardar tokens cerrados
+  const tokens = crearModeloTokens(pool);
 
   //necesito crear una sesión a partir del tipo, rol y privilegio del usuario
   //opcion 1 manejorlo desde mysql, significa que debo de tener una tabla de sesiones
@@ -57,16 +57,6 @@ function crearApp(config, pool){
   
   //conocer el id de la sesión
   const idCorto = (id) => (id ? `${id.slice(0, 8)}...` : null);
-
-  //en el uso de middleware como existe el intercambio de la sesion para tener un seguimiento del usuario, rol, privilegio, etc, se utiliza el atributo roling para poder extener su uso
-
-  function requiereSesion(req, res, next){
-    return pendiente(1)(req, res, next);
-  }
-
-  function requiereRol(rol){
-    return pendiente(3);
-  }
 
   //cuando estemos utilizando un middleware verificar la sesión actividad a partir ya sea de la consulta al servidor o la cookie
   function vencida(sesion){
@@ -103,7 +93,6 @@ function crearApp(config, pool){
 
   //vamos a generar un contador en la sesion, sirve para saver que la sesion existe antes de entrar
   app.post('/api/visita', (req, res) =>{
-    if(!req.session) return pendiente(1)(req, res);
     req.session.visitas = (req.session.visitas || 0)+1;
     res.json({visitas : req.session.visitas, sesion : idCorto(req.sessionID)});
   });
@@ -121,7 +110,7 @@ function crearApp(config, pool){
 
       //guardo la sesion
       const guardar = () =>{
-        req.session.usuario = datos; // <--- Cambiado de .datos a .usuario para que coincida con las validaciones
+        req.session.usuario = datos;
         req.session.visitas = visitas;
         req.session.creada = Date.now();
         req.session.ultimoUso = Date.now();
@@ -174,7 +163,7 @@ function crearApp(config, pool){
   app.get('/api/diagnostico/sesiones', async(req, res, next)=>{
     try{
       const sesiones = await todasLasSesiones(almacen);
-      const lista = Object.entries(sesiones || {}).map(([id], s) =>({
+      const lista = Object.entries(sesiones || {}).map(([id, s]) =>({
         sesion : idCorto(id),
         esLaTuta : id === req.sessionID,
         usuario : s.usuario ? s.usuario.usuario : '(sin iniciar sesion)',
@@ -187,7 +176,120 @@ function crearApp(config, pool){
     }
   });
 
-  app.use('/api', (req, res)=> res.status(404).json({error: 'Ruta no encontrada'}))
+  //vamos a continuar con el jwt
+  const SECRETO_JWT = config.jwtSecreto || process.env.JWT_SECRET || 'secreto-jwt-solo-para-la-demo';
+
+  //vamos a crear el token de un usuario, con datos, (payload) + vencimiento + id unico y va a estar firmado con HS256 
+  function firmarToken(usuario){
+    return jwt.sign(
+      {sub: String(usuario.id), usuario : usuario.usuario, nombre: usuario.nombre, rol: usuario.rol},
+      SECRETO_JWT,
+      {algorithm: 'HS256', expiresIn: config.jwtExpiraSeg, jwtid: crypto.randomUUID()}
+    );
+  }
+
+  //para poder atender la petición con el middleware
+  async function requiereJWT(req, res, next) {
+    const encabezado = req.headers.authorization || '';
+    if(!encabezado.startsWith('Bearer ')){
+      return res.status(401).json({error: '401. Falta el token para estar Autorizado'});
+    }
+    const token = encabezado.slice('Bearer '.length).trim();
+
+    let datos;
+    try{
+      //debemos aceptar los datos de acuerdo al algoritmo
+      datos = jwt.verify(token, SECRETO_JWT, {algorithms: ['HS256']});
+    }catch(error){
+      if(error.name === 'TokenExpiredError'){
+        return res.status(401).json({error: '401 Token expirado por favor renuevalo o vuelve iniciar'});
+      } 
+      return res.status(401).json({error: '401 Token invalido'});
+    }
+    try{
+      if(config.jwtRevocar && (await tokens.estaRevocado(datos.jti))){
+        return res.status(401).json({error: '401. Token revocado ya se cerro la sesión'});
+      }
+    }catch(error){
+      return next(error);
+    }
+
+    req.jwt = datos;
+    next();
+  }
+
+  //funcion para verificar si el rol es valido con su token
+  function requiereRolJWT(rol){
+    return (req, res, next) => {
+      if(req.jwt.rol !== rol){
+        return res.status(403).json({error: `403 Eres ${req.jwt.usuario}, pero esta ruta no tienes el permiso para navegar de acuerdo a tu ${rol}`});
+      }
+      next();
+    };
+  }
+
+  //manejo de rutas con jwt
+
+  app.post('/api/jwt/login', async(req, res, next) =>{
+    try{
+      const {usuario, contrasena} = req.body || {};
+      const datos = await usuarios.verificar(usuario, contrasena);
+      if(!datos) return res.status(401).json({error: 'Usuario o contraseña incorrectos'});
+      res.json({token: firmarToken(datos), usuario: datos});
+    }catch(error){
+      next(error);
+    }
+  });
+
+  //presentamos los elementos de la sesion jwt igual que en /api/sesion
+  app.get('/api/jwt/sesion', requiereJWT, (req, res)=>{
+    res.json({
+      usuario: {
+        id: req.jwt.sub,
+        usuario: req.jwt.usuario,
+        nombre: req.jwt.nombre,
+        rol: req.jwt.rol,
+      },
+      token: idCorto(req.jwt.jti),
+      emitidoEn: req.jwt.iat,
+      expiraEn: req.jwt.exp,
+      expiraEnSegundos: Math.max(0, req.jwt.exp - Math.floor(Date.now() / 1000)),
+      revocacion: Boolean(config.jwtRevocar),
+    });
+  });
+
+  app.get('/api/jwt/perfil', requiereJWT, (req, res)=>{
+    res.json({
+      mensaje: `Hola ${req.jwt.nombre}`,
+      rol : req.jwt.rol, 
+      expiraEnSegundos : Math.max(0, req.jwt.exp - Math.floor(Date.now() / 1000))
+    });
+  });
+
+  //ejemplo de revocación de de un token todavia valido
+  app.post('/api/jwt/refresh', requiereJWT, (req, res) => {
+    const {sub, usuario, nombre, rol} = req.jwt;
+    res.json({token: firmarToken({id : sub, usuario, nombre, rol})});
+  });
+
+  app.get('/api/jwt/reporte', requiereJWT, requiereRolJWT('admin'), (req, res)=>{
+    res.json({reporte: 'Talleres: 3'});
+  });
+
+  //que le pasa al token cuando logout
+  app.post('/api/jwt/logout', requiereJWT, async (req, res, next)=>{
+    try{
+      if(config.jwtRevocar){
+        await tokens.revocar(req.jwt.jti, req.jwt.usuario, req.jwt.exp);
+        return res.json({mensaje: 'Token revocado en el servidor, se anota en la lista negra', revocado:true}); 
+      }
+      return res.json({mensaje : 'El servidor no guarda nada, solo se puede borrar el token desde el navegador', revocado: false});
+    }catch(error){
+      next(error);
+    }
+  });
+
+  app.use('/api', (req, res)=> res.status(404).json({error: 'Ruta no encontrada'}));
 
   app.use(express.static(path.join(__dirname, 'public')));
 
@@ -198,50 +300,6 @@ function crearApp(config, pool){
   });
 
   return app;
-}
-
-
-//vamos a continuar con el jwt
-const SECRETO_JWT = config.jwtSecreto || process.env.JWT_SECRET || 'secreto-jwt-solo-para-la-demo';
-
-//vamos a crear el token de un usuario, con datos, (payload) + vencimiento + id unico y va a estar firmado con HS256 
-function firmarToken(usuario){
-  return jwt.sign(
-    {sub: String(usuario.id), usuario : usuario.usuario, nombre: usuario.nombre, rol: usuario.rol}, SECRETO_JWT, {algorithm: 'HS256', expiresIn: config.jwtExpiraSeg, jwtid: crypto.randomUUID()}
-  )
-
-  //para poder atender la petición con el middleware
-  async function requiereJWT(req, res, next) {
-    const encabezado = req.header.authorization || '';
-    if(!encabezado.startsWith('Bearer ')){
-      return res.status(401).json({error: '401. Falta el token para estar Autorizado'});
-    }
-    const token = encabezado.slice('Bearer'.length);
-
-    let datos;
-    try{
-      //debemos aceptar los datos de acuerdo al algoritmo
-      datos = jwt.verify(token, SECRETO_JWT, {algorithms: ['HS256']});
-    }catch(error){
-      if(error.name === 'TokenExpiredError'){
-        return res.status(401).json({error: '401 Token expirado por favor renuevalo o vuelve iniciar'});
-      } 
-      return res.status(401).json({error: '401 Token invalido'})
-    }
-    try{
-      if(config.jwtRevocar && (await crearModeloTokens.estaRevocado(datos.jti))){
-        return res.status(401).json({error: '401. Token revocado ya se cerro la sesión'})
-      }
-    }catch(error){
-      return next(error);
-    }
-
-    req.jwt = datos;
-    next();
-    
-  }
-
-  
 }
 
 module.exports = {crearApp, NOMBRE_COOKIE};
