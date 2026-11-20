@@ -34,7 +34,7 @@ function crearApp(config, pool){
 
   const almacen = config.almacen === 'memoria'
     ? new session.MemoryStore()
-    : new MySQLStore({ createDatabaseTable: false, clearExpired: false }, pool);
+    : new MySQLStore({ createDatabaseTable: true, clearExpired: false }, pool);
   app.locals.almacen = almacen;
 
   app.use(
@@ -47,7 +47,7 @@ function crearApp(config, pool){
       saveUninitialized : false, //no crea la sesion ni la cookie
       rolling : config.rolling,
       cookie : {
-        maxAge: config.maxAge || 1000*60*60*24,
+        maxAge: config.maxAgeMs || 1000 * 60 * 10,
         httpOnly: config.httpOnly,
         sameSite : config.sameSite,
         secure : false //activar el https
@@ -59,10 +59,12 @@ function crearApp(config, pool){
   const idCorto = (id) => (id ? `${id.slice(0, 8)}...` : null);
 
   //cuando estemos utilizando un middleware verificar la sesión actividad a partir ya sea de la consulta al servidor o la cookie
-  function vencida(sesion){
-    const desde = config.rolling ? sesion.ultimoUso : sesion.creada;
-    return Date.now() - desde > config.maxAge;
-  }
+  function vencida(sesion) {
+    const maxMs = config.maxAgeMs || 1000 * 60 * 10;
+    const desde = config.rolling ? (sesion.ultimoUso || sesion.creada) : sesion.creada;
+    if (!desde) return false;
+    return Date.now() - desde > maxMs;
+}
 
   //tenemos que identicar quien entro
   function requiereSesion(req, res, next){
